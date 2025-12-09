@@ -1,24 +1,22 @@
 package com.flaboy.klog.napier
 
-import com.flaboy.klog.PlatformLogger
-import com.flaboy.klog.RingLogger
+import com.flaboy.klog.KLogger
 import io.github.aakira.napier.Antilog
 import io.github.aakira.napier.LogLevel
 
 /**
- * Napier Antilog implementation that stores logs to klog RingLogger.
+ * Napier Antilog implementation that sends logs to KLogger.
+ * KLogger handles both console output and file storage.
  * 
  * Usage:
  * ```
- * val ringLogger = RingLogger(path, config)
- * val platformLogger = MyPlatformLogger()
- * val antilog = NapierKlogAntilog(ringLogger, platformLogger)
+ * val klogger = KLogger.initialize(logPath, platformLogger)
+ * val antilog = NapierKlogAntilog(klogger)
  * Napier.base(antilog)
  * ```
  */
 class NapierKlogAntilog(
-    private val ringLogger: RingLogger,
-    private val platformLogger: PlatformLogger
+    private val klogger: KLogger
 ) : Antilog() {
     
     override fun performLog(
@@ -30,32 +28,21 @@ class NapierKlogAntilog(
         val finalMessage = message ?: ""
         val finalTag = tag ?: "Napier"
         
-        // 1. Output to console using klog PlatformLogger
+        // Send to KLogger - it handles both console and file output
         when (priority) {
             LogLevel.VERBOSE,
             LogLevel.DEBUG,
             LogLevel.INFO -> {
-                platformLogger.log(finalTag, finalMessage)
+                klogger.log(finalTag, finalMessage)
             }
             LogLevel.WARNING -> {
-                platformLogger.logW(finalTag, finalMessage)
+                klogger.logW(finalTag, finalMessage)
             }
             LogLevel.ERROR,
             LogLevel.ASSERT -> {
-                platformLogger.logE(finalTag, finalMessage, throwable)
+                klogger.logE(finalTag, finalMessage, throwable)
             }
         }
-        
-        // 2. Store to file (message is already formatted by Napier)
-        val level = when (priority) {
-            LogLevel.VERBOSE,
-            LogLevel.DEBUG,
-            LogLevel.INFO -> 1.toByte()
-            LogLevel.WARNING -> 2.toByte()
-            LogLevel.ERROR,
-            LogLevel.ASSERT -> 3.toByte()
-        }
-        ringLogger.append(finalMessage, level)
     }
 }
 
